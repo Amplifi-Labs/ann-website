@@ -8,8 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Georgia&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
+<style>
   :root{
     --blue: #00447C;
     --blue-dark: #00335E;
@@ -534,6 +533,14 @@
     width:100%;
   }
   .field input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  .field.invalid input[type="text"],
+  .field.invalid input[type="email"],
+  .field.invalid input[type="tel"]{
+    border-color:#c0392b;
+    background:#fdf1ef;
+  }
+  .field-error{ font-size:12px; color:#c0392b; font-weight:500; display:none; }
+  .field.invalid .field-error{ display:block; }
   .radio-row{ display:flex; gap:18px; align-items:center; margin-top:2px; }
   .radio-row label{
     display:flex; align-items:center; gap:7px;
@@ -547,6 +554,36 @@
   .form-status{ grid-column:1 / -1; font-size:13.5px; font-weight:600; margin:0; display:none; }
   .form-status.success{ display:block; color:#1a7f37; }
   .form-status.error{ display:block; color:#c0392b; }
+
+  /* ---------- SUCCESS BANNER ---------- */
+  .success-banner{
+    position:fixed;
+    top:22px;
+    left:50%;
+    transform:translate(-50%, -140%);
+    z-index:999;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:#1a7f37;
+    color:#fff;
+    padding:16px 24px;
+    border-radius:5px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    font-size:14.5px;
+    font-weight:600;
+    max-width:90vw;
+    transition:transform 0.35s ease;
+  }
+  .success-banner.show{ transform:translate(-50%, 0); }
+  .success-banner .check{
+    flex-shrink:0;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px;
+  }
 
   /* ---------- FOOTER ---------- */
   footer{
@@ -571,6 +608,12 @@
 </style>
 </head>
 <body>
+
+<!-- ============ SUCCESS BANNER ============ -->
+<div class="success-banner" id="success-banner" role="status" aria-live="polite">
+  <span class="check">✓</span>
+  <span id="success-banner-text">Thank you! Your request has been submitted.</span>
+</div>
 
 <!-- ============ HEADER ============ -->
 <header>
@@ -743,22 +786,27 @@
           <div class="field">
             <label for="fname">First Name</label>
             <input type="text" id="fname" name="first_name" required>
+            <span class="field-error">First name is required.</span>
           </div>
           <div class="field">
             <label for="lname">Last Name</label>
             <input type="text" id="lname" name="last_name" required>
+            <span class="field-error">Last name is required.</span>
           </div>
           <div class="field full">
             <label for="bname">Business Name</label>
             <input type="text" id="bname" name="bname" required>
+            <span class="field-error">Business name is required.</span>
           </div>
           <div class="field">
             <label for="email">Email</label>
             <input type="email" id="email" name="email" required>
+            <span class="field-error">Enter a valid email address.</span>
           </div>
           <div class="field">
             <label for="phone">Phone</label>
             <input type="tel" id="phone" name="phone" required>
+            <span class="field-error">Phone number is required.</span>
           </div>
           <div class="field full">
             <label>Do you have access to ACE?</label>
@@ -766,6 +814,7 @@
               <label><input type="radio" name="ace" value="Yes" required> Yes</label>
               <label><input type="radio" name="ace" value="No" required> No</label>
             </div>
+            <span class="field-error">Please select an option.</span>
           </div>
           <div class="field full">
             <label for="est-tariffs">Estimated IEEPA Tariffs Paid (not yet refunded in CAPE)</label>
@@ -783,50 +832,137 @@
 </section>
 
 <script>
-  document.getElementById('eval-form').addEventListener('submit', function(e){
-    e.preventDefault();
-    var f = e.target;
+  (function(){
+    var form = document.getElementById('eval-form');
     var status = document.getElementById('form-status');
-    var ace = f.querySelector('input[name="ace"]:checked');
+    var banner = document.getElementById('success-banner');
+    var bannerText = document.getElementById('success-banner-text');
+    var bannerTimer = null;
 
-    var lines = [
-      'Business Name: ' + f.bname.value,
-      'Phone: ' + f.phone.value,
-      'Access to ACE: ' + (ace ? ace.value : ''),
-      'Estimated IEEPA Tariffs Paid: ' + f['est-tariffs'].value
-    ];
-    document.getElementById('message').value = lines.join('\n');
+    function setFieldValid(field){
+      field.classList.remove('invalid');
+    }
+    function setFieldInvalid(field){
+      field.classList.add('invalid');
+    }
 
-    var formData = new FormData(f);
-    var object = Object.fromEntries(formData);
-    var json = JSON.stringify(object);
-
-    status.className = 'form-status';
-    status.style.display = 'none';
-
-    fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: json
-    })
-      .then(function(response){ return response.json(); })
-      .then(function(result){
-        if (result.success) {
-          status.classList.add('success');
-          status.innerHTML = 'Thank you! Your request has been submitted. Our team will follow up shortly.';
-          f.reset();
-        } else {
-          console.log(result);
-          status.classList.add('error');
-          status.innerHTML = result.message || 'Something went wrong. Please try again.';
-        }
-      })
-      .catch(function(error){
-        console.log(error);
-        status.classList.add('error');
-        status.innerHTML = 'Something went wrong. Please try again.';
+    // Clear a field's error state as soon as the user fixes it
+    form.querySelectorAll('.field input').forEach(function(input){
+      input.addEventListener('input', function(){
+        var field = input.closest('.field');
+        if (field) setFieldValid(field);
       });
-  });
+      input.addEventListener('change', function(){
+        var field = input.closest('.field');
+        if (field) setFieldValid(field);
+      });
+    });
+
+    function validate(f){
+      var isValid = true;
+      var firstInvalid = null;
+
+      var textFields = [
+        f.first_name, f.last_name, f.bname, f.phone
+      ];
+      textFields.forEach(function(input){
+        var field = input.closest('.field');
+        if (!input.value.trim()) {
+          setFieldInvalid(field);
+          isValid = false;
+          firstInvalid = firstInvalid || input;
+        } else {
+          setFieldValid(field);
+        }
+      });
+
+      var emailField = f.email.closest('.field');
+      var emailValid = f.email.value.trim() && f.email.checkValidity();
+      if (!emailValid) {
+        setFieldInvalid(emailField);
+        isValid = false;
+        firstInvalid = firstInvalid || f.email;
+      } else {
+        setFieldValid(emailField);
+      }
+
+      var aceChecked = f.querySelector('input[name="ace"]:checked');
+      var aceField = f.querySelector('input[name="ace"]').closest('.field');
+      if (!aceChecked) {
+        setFieldInvalid(aceField);
+        isValid = false;
+        firstInvalid = firstInvalid || f.querySelector('input[name="ace"]');
+      } else {
+        setFieldValid(aceField);
+      }
+
+      if (firstInvalid) firstInvalid.focus();
+      return isValid;
+    }
+
+    function showSuccessBanner(message){
+      bannerText.textContent = message;
+      banner.classList.add('show');
+      if (bannerTimer) clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(function(){
+        banner.classList.remove('show');
+      }, 5000);
+    }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var f = e.target;
+
+      status.className = 'form-status';
+      status.style.display = 'none';
+
+      if (!validate(f)) {
+        return;
+      }
+
+      var ace = f.querySelector('input[name="ace"]:checked');
+      var lines = [
+        'Business Name: ' + f.bname.value,
+        'Phone: ' + f.phone.value,
+        'Access to ACE: ' + (ace ? ace.value : ''),
+        'Estimated IEEPA Tariffs Paid: ' + f['est-tariffs'].value
+      ];
+      document.getElementById('message').value = lines.join('\n');
+
+      var formData = new FormData(f);
+      var object = Object.fromEntries(formData);
+      var json = JSON.stringify(object);
+
+      var submitBtn = f.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: json
+      })
+        .then(function(response){ return response.json(); })
+        .then(function(result){
+          if (result.success) {
+            showSuccessBanner('Thank you! Your request has been submitted. Our team will follow up shortly.');
+            f.reset();
+            f.querySelectorAll('.field').forEach(setFieldValid);
+          } else {
+            console.log(result);
+            status.classList.add('error');
+            status.innerHTML = result.message || 'Something went wrong. Please try again.';
+          }
+        })
+        .catch(function(error){
+          console.log(error);
+          status.classList.add('error');
+          status.innerHTML = 'Something went wrong. Please try again.';
+        })
+        .finally(function(){
+          submitBtn.disabled = false;
+        });
+    });
+  })();
 </script>
 
 <!-- ============ FOOTER ============ -->
