@@ -858,14 +858,19 @@
       });
     });
 
-    function validate(f){
+    var fFname = document.getElementById('fname');
+    var fLname = document.getElementById('lname');
+    var fBname = document.getElementById('bname');
+    var fEmail = document.getElementById('email');
+    var fPhone = document.getElementById('phone');
+    var fEstTariffs = document.getElementById('est-tariffs');
+    var fMessage = document.getElementById('message');
+
+    function validate(){
       var isValid = true;
       var firstInvalid = null;
 
-      var textFields = [
-        f.first_name, f.last_name, f.bname, f.phone
-      ];
-      textFields.forEach(function(input){
+      [fFname, fLname, fBname, fPhone].forEach(function(input){
         var field = input.closest('.field');
         if (!input.value.trim()) {
           setFieldInvalid(field);
@@ -876,22 +881,23 @@
         }
       });
 
-      var emailField = f.email.closest('.field');
-      var emailValid = f.email.value.trim() && f.email.checkValidity();
+      var emailField = fEmail.closest('.field');
+      var emailValid = fEmail.value.trim() && fEmail.checkValidity();
       if (!emailValid) {
         setFieldInvalid(emailField);
         isValid = false;
-        firstInvalid = firstInvalid || f.email;
+        firstInvalid = firstInvalid || fEmail;
       } else {
         setFieldValid(emailField);
       }
 
-      var aceChecked = f.querySelector('input[name="ace"]:checked');
-      var aceField = f.querySelector('input[name="ace"]').closest('.field');
+      var aceInput = form.querySelector('input[name="ace"]');
+      var aceChecked = form.querySelector('input[name="ace"]:checked');
+      var aceField = aceInput.closest('.field');
       if (!aceChecked) {
         setFieldInvalid(aceField);
         isValid = false;
-        firstInvalid = firstInvalid || f.querySelector('input[name="ace"]');
+        firstInvalid = firstInvalid || aceInput;
       } else {
         setFieldValid(aceField);
       }
@@ -911,29 +917,27 @@
 
     form.addEventListener('submit', function(e){
       e.preventDefault();
-      var f = e.target;
 
       status.className = 'form-status';
-      status.style.display = 'none';
 
-      if (!validate(f)) {
+      if (!validate()) {
         return;
       }
 
-      var ace = f.querySelector('input[name="ace"]:checked');
+      var ace = form.querySelector('input[name="ace"]:checked');
       var lines = [
-        'Business Name: ' + f.bname.value,
-        'Phone: ' + f.phone.value,
+        'Business Name: ' + fBname.value,
+        'Phone: ' + fPhone.value,
         'Access to ACE: ' + (ace ? ace.value : ''),
-        'Estimated IEEPA Tariffs Paid: ' + f['est-tariffs'].value
+        'Estimated IEEPA Tariffs Paid: ' + fEstTariffs.value
       ];
-      document.getElementById('message').value = lines.join('\n');
+      fMessage.value = lines.join('\n');
 
-      var formData = new FormData(f);
+      var formData = new FormData(form);
       var object = Object.fromEntries(formData);
       var json = JSON.stringify(object);
 
-      var submitBtn = f.querySelector('button[type="submit"]');
+      var submitBtn = form.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
 
       fetch('https://api.web3forms.com/submit', {
@@ -945,8 +949,8 @@
         .then(function(result){
           if (result.success) {
             showSuccessBanner('Thank you! Your request has been submitted. Our team will follow up shortly.');
-            f.reset();
-            f.querySelectorAll('.field').forEach(setFieldValid);
+            form.reset();
+            form.querySelectorAll('.field').forEach(setFieldValid);
           } else {
             console.log(result);
             status.classList.add('error');
